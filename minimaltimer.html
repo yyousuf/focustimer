@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Timer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        :root {
+            --mouse-x: 50%;
+            --mouse-y: 50%;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #080808;
+            color: #ededed;
+            overflow: hidden;
+            transition: background-color 1.5s ease;
+            cursor: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            position: relative;
+        }
+
+        .bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            background: radial-gradient(circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.04) 0%, transparent 40%);
+            transition: opacity 1s ease;
+            opacity: 0;
+        }
+
+        .aura-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -3;
+            mix-blend-mode: screen;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+            animation: breathe 20s infinite alternate ease-in-out;
+        }
+
+        /* Show ambient light only when UI is visible */
+        body.show-ui .bg-canvas { opacity: 1; }
+        body.show-ui .aura-orb { opacity: 0.3; }
+
+        .orb-1 { width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(100, 100, 255, 0.1), transparent 70%); top: -10%; left: -10%; }
+        .orb-2 { width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(255, 100, 100, 0.05), transparent 70%); bottom: -5%; right: 10%; }
+        .orb-3 { width: 35vw; height: 35vw; background: radial-gradient(circle, rgba(255, 255, 255, 0.05), transparent 70%); top: 40%; left: 30%; }
+
+        @keyframes breathe {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(5%, 10%) scale(1.1); }
+            100% { transform: translate(-5%, 5%) scale(0.95); }
+        }
+
+        .grain-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            pointer-events: none;
+            opacity: 0.15;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        body.show-ui { cursor: default; }
+
+        .main-wrapper {
+            position: relative;
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 500px;
+            max-height: 500px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            overflow: visible; 
+            pointer-events: none;
+        }
+
+        .timer-container {
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.show-ui .timer-container { transform: translateY(-55px); }
+
+        .timer-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.05em;
+            background: transparent;
+            border: none;
+            color: inherit;
+            text-align: center;
+            width: 100%;
+            outline: none;
+            cursor: pointer;
+            text-shadow: 0 0 40px rgba(255, 255, 255, 0.05);
+            transition: color 0.3s ease, transform 0.2s ease;
+        }
+
+        .btn-minimal {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn-minimal:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-reset-circle {
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            pointer-events: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px; 
+            height: 40px;
+            border-radius: 9999px;
+        }
+
+        .btn-reset-circle:hover {
+            color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-reset-circle svg {
+            width: 14px;
+            height: 14px;
+            transition: transform 0.3s ease;
+        }
+
+        .btn-reset-circle:active svg { transform: rotate(-120deg); }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.4s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        .spinning-text-group {
+            transform-origin: center;
+            animation: rotateText 160s linear infinite;
+        }
+
+        @keyframes rotateText {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .spinning-text {
+            font-size: 3.2px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            fill: rgba(255, 255, 255, 0.1);
+            mask: radial-gradient(circle at 50% 5%, transparent 10%, black 25%, black 75%, transparent 90%);
+            -webkit-mask: linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%);
+        }
+
+        .controls-overlay {
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(25px);
+            position: absolute;
+            top: 60%;
+            width: 240px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        body.show-ui .controls-overlay { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body class="show-ui">
+    <div class="bg-canvas" id="canvas"></div>
+    <div class="aura-orb orb-1"></div>
+    <div class="aura-orb orb-2"></div>
+    <div class="aura-orb orb-3"></div>
+    <div class="grain-overlay"></div>
+
+    <div class="main-wrapper">
+        <svg viewBox="0 0 100 100">
+            <defs>
+                <path id="circlePath" d="M 50, 50 m -48.5, 0 a 48.5,48.5 0 1,1 97,0 a 48.5,48.5 0 1,1 -97,0" />
+            </defs>
+            <circle class="text-white/5" stroke-width="0.2" stroke="currentColor" fill="transparent" r="44" cx="50" cy="50" />
+            <circle id="progressRing" class="progress-ring__circle text-white/30" stroke-width="1" stroke-dasharray="276.46" stroke-dashoffset="276.46" stroke-linecap="round" stroke="currentColor" fill="transparent" r="44" cx="50" cy="50" />
+            <g class="spinning-text-group">
+                <text class="spinning-text">
+                    <textPath id="quotePath" href="#circlePath" startOffset="0%"></textPath>
+                </text>
+            </g>
+        </svg>
+
+        <div class="timer-container">
+            <input id="display" type="text" value="40:00" spellcheck="false" autocomplete="off" class="timer-display text-[10vw] md:text-[80px] font-light" />
+        </div>
+
+        <div class="controls-overlay">
+            <div class="flex items-center justify-between w-full gap-2">
+                <button id="toggleBtn" class="btn-minimal flex-grow py-2 rounded-full text-[11px] font-semibold uppercase tracking-[0.25em] h-10">Start</button>
+                <button id="resetBtn" class="btn-reset-circle flex-shrink-0" title="Reset (R)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="flex gap-2 w-full justify-between">
+                <button onclick="addTime(5)" class="btn-minimal flex-1 py-1.5 rounded-lg text-[10px] text-gray-400 hover:text-white uppercase tracking-tighter">+5m</button>
+                <button onclick="addTime(10)" class="btn-minimal flex-1 py-1.5 rounded-lg text-[10px] text-gray-400 hover:text-white uppercase tracking-tighter">+10m</button>
+                <div class="flex items-center btn-minimal flex-[1.6] rounded-lg overflow-hidden h-7">
+                    <input type="number" id="customAdd" placeholder="+" class="bg-transparent w-full text-center text-[11px] outline-none border-none h-full" />
+                    <button onclick="addCustom()" class="px-3 py-1 text-[9px] border-l border-white/10 hover:bg-white/5 uppercase font-bold h-full">Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="alarmSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"></audio>
+
+    <script>
+        let sessionStartTime = 2400; 
+        let timeLeft = 2400;
+        let totalTimeSet = 2400;
+        let timerId = null;
+        let isRunning = false;
+        let uiTimeout = null;
+
+        const rawQuotes = [
+            "Stay present • Deep work • Focus on the process",
+            "Eliminate distractions • One thing at a time • Clarity",
+            "Flow state active • Protect your time • Mindful action",
+            "Consistency over intensity • Keep going • Silent progress",
+            "Energy flows where attention goes • Stillness • Intent"
+        ];
+
+        const display = document.getElementById('display');
+        const progressRing = document.getElementById('progressRing');
+        const quotePath = document.getElementById('quotePath');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const customAddInput = document.getElementById('customAdd');
+        const alarmSound = document.getElementById('alarmSound');
+
+        const radius = 44;
+        const circumference = 2 * Math.PI * radius;
+
+        function showUI() {
+            document.body.classList.add('show-ui');
+            clearTimeout(uiTimeout);
+            if (isRunning) {
+                uiTimeout = setTimeout(() => {
+                    if (document.activeElement.tagName !== 'INPUT') {
+                        document.body.classList.remove('show-ui');
+                    }
+                }, 3000);
+            }
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            showUI();
+            const x = (e.clientX / window.innerWidth) * 100;
+            const y = (e.clientY / window.innerHeight) * 100;
+            document.documentElement.style.setProperty('--mouse-x', `${x}%`);
+            document.documentElement.style.setProperty('--mouse-y', `${y}%`);
+        });
+
+        function setProgress(percent) {
+            const offset = circumference - (percent / 100 * circumference);
+            progressRing.style.strokeDashoffset = offset;
+        }
+
+        function updateQuote() {
+            const quoteText = rawQuotes[Math.floor(Math.random() * rawQuotes.length)];
+            const textElement = quotePath.parentElement;
+            textElement.style.opacity = 0;
+            setTimeout(() => {
+                const segment = quoteText.trim() + " • ";
+                quotePath.textContent = segment.repeat(10);
+                textElement.style.opacity = 1;
+            }, 1000);
+        }
+
+        function updateDisplay() {
+            const mins = Math.floor(Math.abs(timeLeft) / 60);
+            const secs = Math.abs(timeLeft) % 60;
+            const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            
+            if (document.activeElement !== display) display.value = timeStr;
+            const percentage = (timeLeft / totalTimeSet) * 100;
+            setProgress(Math.max(0, isNaN(percentage) ? 0 : percentage));
+            
+            if (isRunning && timeLeft > 0 && timeLeft % 300 === 0) updateQuote();
+            document.title = isRunning ? `(${timeStr}) Focus` : 'Focus Timer';
+        }
+
+        function parseManualTime() {
+            const val = display.value.replace(/[^0-9:]/g, '');
+            let seconds = 0;
+            if (val.includes(':')) {
+                const parts = val.split(':');
+                seconds = (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+            } else {
+                seconds = (parseInt(val) || 0) * 60;
+            }
+            if (seconds > 0) {
+                timeLeft = seconds;
+                totalTimeSet = seconds;
+                sessionStartTime = seconds; 
+            }
+        }
+
+        display.addEventListener('focus', () => { if (isRunning) display.blur(); });
+        display.addEventListener('blur', () => { if (!isRunning) parseManualTime(); updateDisplay(); });
+        display.addEventListener('keydown', (e) => { if (e.key === 'Enter') { display.blur(); if (!isRunning) startTimer(); } });
+
+        function toggleTimer() {
+            if (isRunning) pauseTimer(); else startTimer();
+            showUI();
+        }
+
+        function startTimer() {
+            if (!isRunning && document.activeElement === display) parseManualTime();
+            if (timeLeft <= 0) return;
+            isRunning = true;
+            display.readOnly = true;
+            toggleBtn.textContent = 'Pause';
+            timerId = setInterval(() => {
+                if (timeLeft > 0) { timeLeft--; updateDisplay(); } else { completeTimer(); }
+            }, 1000);
+            showUI();
+        }
+
+        function pauseTimer() {
+            isRunning = false;
+            display.readOnly = false;
+            toggleBtn.textContent = 'Resume';
+            clearInterval(timerId);
+            showUI();
+        }
+
+        function resetTimer() {
+            pauseTimer();
+            timeLeft = sessionStartTime;
+            totalTimeSet = sessionStartTime;
+            toggleBtn.textContent = 'Start';
+            updateDisplay();
+            showUI();
+        }
+
+        function addTime(mins) {
+            const s = mins * 60;
+            timeLeft += s;
+            totalTimeSet += s;
+            if (!isRunning) sessionStartTime = timeLeft;
+            updateDisplay();
+        }
+
+        function addCustom() {
+            const val = parseInt(customAddInput.value);
+            if (!isNaN(val) && val > 0) { addTime(val); customAddInput.value = ''; }
+        }
+
+        function completeTimer() {
+            pauseTimer();
+            alarmSound.play();
+        }
+
+        updateQuote();
+        toggleBtn.addEventListener('click', toggleTimer);
+        resetBtn.addEventListener('click', resetTimer);
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.code === 'Space') { e.preventDefault(); toggleTimer(); }
+            if (e.code === 'KeyR') resetTimer();
+        });
+        updateDisplay();
+    </script>
+</body>
+</html>
